@@ -1,0 +1,156 @@
+# System Configuration Guide
+
+## SSH Configuration Guide
+
+### 1. SSH Server Setup
+```bash
+# Install SSH server
+sudo apt install openssh-server
+
+# Configure SSH
+sudo nano /etc/ssh/sshd_config
+
+# Key settings to modify:
+Port 22                     # Change if needed
+PermitRootLogin no         # Disable root login
+PasswordAuthentication no  # Use keys only
+PubkeyAuthentication yes  # Enable key authentication
+```
+
+### 2. SSH Key Management
+```bash
+# Generate key pair
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+# Copy key to remote server
+ssh-copy-id -i ~/.ssh/id_ed25519.pub user@remote-server
+
+# Set proper permissions
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/id_ed25519
+chmod 644 ~/.ssh/id_ed25519.pub
+```
+
+### 3. SSH Security Best Practices
+- Use SSH keys instead of passwords
+- Change default port (optional)
+- Implement fail2ban for brute force protection
+- Use AllowUsers directive to specify allowed users
+- Keep system and SSH updated
+- Use SSH config file for multiple hosts
+
+Example ~/.ssh/config:
+```
+Host server1
+    HostName server1.example.com
+    User username
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+## DNS Configuration Guide
+
+### 1. Local DNS Resolution
+```bash
+# Install DNS server
+sudo apt install bind9 bind9utils
+
+# Configure main DNS config
+sudo nano /etc/bind/named.conf.options
+
+# Basic options:
+options {
+    directory "/var/cache/bind";
+    recursion yes;
+    allow-recursion { trusted; };
+    listen-on { 192.168.1.1; };
+    allow-transfer { none; };
+    forwarders {
+        8.8.8.8;
+        8.8.4.4;
+    };
+};
+```
+
+### 2. Zone Configuration
+Example forward zone (/etc/bind/zones/example.com.zone):
+```
+$TTL    604800
+@       IN      SOA     example.com. admin.example.com. (
+                        2024031701    ; Serial
+                        604800        ; Refresh
+                        86400         ; Retry
+                        2419200       ; Expire
+                        604800 )      ; Negative Cache TTL
+
+@       IN      NS      ns1.example.com.
+@       IN      A       192.168.1.10
+www     IN      A       192.168.1.10
+mail    IN      A       192.168.1.11
+```
+
+### 3. Common DNS Tasks
+```bash
+# Check DNS configuration
+named-checkconf
+named-checkzone example.com /etc/bind/zones/example.com.zone
+
+# Update DNS records
+sudo rndc reload
+
+# Query DNS records
+dig @localhost example.com
+nslookup example.com localhost
+```
+
+### 4. DNS Security Best Practices
+- Implement DNSSEC
+- Restrict zone transfers
+- Use ACLs to control access
+- Regular backups of DNS configurations
+- Monitor DNS logs
+- Keep BIND software updated
+
+## Maintenance Tasks
+
+### Regular Updates
+```bash
+# Update system and packages
+sudo apt update
+sudo apt upgrade
+
+# Check system logs
+sudo journalctl -xe
+```
+
+### Backup Configuration
+```bash
+# Backup important configs
+sudo tar -czf /backup/configs.tar.gz \
+    /etc/ssh/sshd_config \
+    /etc/bind/ \
+    ~/.ssh/
+```
+
+### Security Monitoring
+```bash
+# Check failed login attempts
+sudo grep "Failed password" /var/log/auth.log
+
+# Monitor DNS queries
+sudo tcpdump -i any port 53
+```
+
+Remember to regularly:
+1. Review system logs
+2. Update security patches
+3. Test backup restoration
+4. Verify DNS resolution
+5. Check SSH access logs
+6. Update SSL certificates if used
+
+For additional security:
+- Consider implementing fail2ban
+- Use UFW or iptables firewall
+- Regular security audits
+- Monitor system resources
